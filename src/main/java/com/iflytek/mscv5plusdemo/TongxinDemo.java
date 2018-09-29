@@ -2,12 +2,15 @@ package com.iflytek.mscv5plusdemo;
 
 import android.app.Activity;
 import android.os.Handler;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +43,7 @@ public class TongxinDemo extends Activity implements View.OnClickListener{
             public void run() {
 
                 try {
-                    socket = new Socket("192.168.42.198" , 7654);
+                    socket = new Socket("192.168.42.181" , 7654);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -157,9 +160,15 @@ public class TongxinDemo extends Activity implements View.OnClickListener{
                 byte[] buffer = new byte[1024];
                 int count = inputStream.read(buffer);//count是传输的字节数
                 recv_buff = new String(buffer);//socket通信传输的是byte类型，需要转为String类型
-                System.out.println(recv_buff);
+                JSONObject jsonObject = new JSONObject(recv_buff);
+                System.out.println(jsonObject.get("1"));
+                recv_buff = (String) jsonObject.get("1");
+                //Toast.makeText(this, (String) jsonObject.get("1"), Toast.LENGTH_SHORT).show();
+
 
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
