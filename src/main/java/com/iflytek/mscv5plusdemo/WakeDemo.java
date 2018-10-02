@@ -497,36 +497,6 @@ public class WakeDemo extends Activity implements View.OnClickListener {
         lat = MyBdLocation.getLatitude();
         lng = MyBdLocation.getLongitude();
 
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-////                try {
-////                    myURL = new URL(url);
-////                    httpsConn = (URLConnection) myURL.openConnection();
-////                    inputStream = httpsConn.getInputStream();
-////                } catch (MalformedURLException e) {
-////                    e.printStackTrace();
-////                } catch (IOException e) {
-////                    e.printStackTrace();
-////                }
-////                if (inputStream!=null){
-////                    try {
-////                        byte[] buffer = new byte[1024];
-////                        int count = inputStream.read(buffer);//count是传输的字节数
-////                        recv_buff2 = new String(buffer);//socket通信传输的是byte类型，需要转为String类型
-////                        JSONObject jsonObject = new JSONObject(recv_buff2);
-////
-////                        pt2lng= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lng");
-////                        pt2lat= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lat");
-//////                        handler.post(runnableUi1);
-////                    } catch (IOException e) {
-////                        e.printStackTrace();
-////                    } catch (JSONException e) {
-////                        e.printStackTrace();
-////                    }
-////                }
-//            }
-//        }).start();
         Thread daoHangThre = new Thread(new daoHangUrlThre());
         daoHangThre.start();
         try {
