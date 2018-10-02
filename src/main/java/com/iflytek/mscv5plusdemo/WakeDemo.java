@@ -1,55 +1,32 @@
 package com.iflytek.mscv5plusdemo;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
-
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
+import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.RadioGroup;
-import android.widget.RadioGroup.OnCheckedChangeListener;
-import android.widget.SeekBar;
-import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
-import com.baidu.location.BDLocationListener;
-import com.baidu.location.LocationClient;
-import com.baidu.location.LocationClientOption;
 import com.baidu.location.Poi;
-import com.baidu.mapapi.map.BaiduMap;
-import com.baidu.mapapi.map.MapStatus;
-import com.baidu.mapapi.map.MapStatusUpdateFactory;
-import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.navi.BaiduMapAppNotSupportNaviException;
 import com.baidu.mapapi.navi.BaiduMapNavigation;
 import com.baidu.mapapi.navi.NaviParaOption;
-import com.baidu.mapapi.utils.OpenClientUtil;
 import com.iflytek.cloud.ErrorCode;
-import com.iflytek.cloud.InitListener;
 import com.iflytek.cloud.RecognizerListener;
 import com.iflytek.cloud.RecognizerResult;
-import com.iflytek.cloud.RequestListener;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechEvent;
@@ -59,14 +36,24 @@ import com.iflytek.cloud.SynthesizerListener;
 import com.iflytek.cloud.VoiceWakeuper;
 import com.iflytek.cloud.WakeuperListener;
 import com.iflytek.cloud.WakeuperResult;
-import com.iflytek.cloud.ui.RecognizerDialog;
-import com.iflytek.cloud.util.FileDownloadListener;
-import com.iflytek.cloud.util.ResourceUtil;
-import com.iflytek.cloud.util.ResourceUtil.RESOURCE_TYPE;
 import com.iflytek.speech.setting.LocationService;
+import com.iflytek.speech.util.GetLatLng;
+import com.iflytek.speech.util.HandleRecInfo;
+import com.iflytek.speech.util.HandleSend;
 import com.iflytek.speech.util.JsonParser;
 import com.iflytek.speech.util.adresstolatlan;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.math.BigDecimal;
+import java.net.MalformedURLException;
+import java.net.Socket;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -80,26 +67,35 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 	private EditText result;
 	// 语音唤醒对象
 	private VoiceWakeuper mIvw;
-	// 设置门限值 ： 门限值越低越容易被唤醒
-	private int curThresh = 1450;
-	private String keep_alive = "1";
-    private String ivwNetMode = "0";
-
     /////////////////////////////////
     // 语音听写对象
     private SpeechRecognizer mIat;
-    // 用HashMap存储听写结果
-    private HashMap<String, String> mIatResults = new LinkedHashMap<String, String>();
-    // 引擎类型
-    private String mEngineType = SpeechConstant.TYPE_CLOUD;
-    private boolean mTranslateEnable = false;
-    private SharedPreferences mSharedPreferences;
+//    private boolean mTranslateEnable = false;
     ///////////////////////导航////////////////////////////
     private LocationService locationService;
     private double lat; private double lng;
     private BDLocation MyBdLocation;
     // 语音合成对象
     private SpeechSynthesizer mTts;
+
+    private EditText et_send;
+    private Button bt_send;
+    private TextView tv_recv;
+    private String send_buff=null;
+    private String recv_buff=null;
+    private Handler handler = null;
+    Socket socket = null;
+    //------------------------------
+    double ptlat=0;
+    double ptlng=0;
+
+    String url = "http://api.map.baidu.com/geocoder/v2/?address=中北大学&output=json&ak=GY8rADx7a5mi8qVU1Kz755c2GU05Arnw&mcode=51:E8:27:D4:BA:68:4F:98:D0:42:F8:92:31:22:EC:61:D1:EE:D7:8E;com.iflytek.mscv5plusdemo";
+    String recv_buff2 = null;
+    URL myURL = null;
+    URLConnection httpsConn = null;
+    InputStream inputStream = null;
+    double pt2lat = 8.0;
+    double pt2lng = 0.0;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -109,16 +105,26 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 		requestPermissions();
 		init();
 		initmap();
-		// 初始化唤醒对象
-		mIvw = VoiceWakeuper.createWakeuper(this, null);
-        mToast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
-        findViewById(R.id.button).setOnClickListener(this);
-        findViewById(R.id.btn_hecheng).setOnClickListener(this);
-        findViewById(R.id.btn_daohang).setOnClickListener(this);
-        findViewById(R.id.btn_local).setOnClickListener(this);
-        findViewById(R.id.btn_tongxin).setOnClickListener(this);
-        editText = (EditText) findViewById(R.id.edit_text);
-        result = (EditText) findViewById(R.id.result);
+        handler = new Handler();
+        //单开一个线程来进行socket通信
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//
+//                try {
+//                    socket = new Socket("192.168.42.233" , 7654);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//                if (socket!=null) {
+//                    System.out.println("###################");
+//                    while (true) {      //循环进行收发
+//                        recv();
+//                    }
+//                } else
+//                    System.out.println("socket is null");
+//            }
+//        }).start();
 	}
 
     private void initmap() {
@@ -151,70 +157,26 @@ public class WakeDemo extends Activity implements View.OnClickListener {
     }
 
     private void init() {
-        // 初始化识别无UI识别对象
-        // 使用SpeechRecognizer对象，可根据回调消息自定义界面；
-        mIat = SpeechRecognizer.createRecognizer(WakeDemo.this, mInitListener);
-        mSharedPreferences = getSharedPreferences("com.iflytek.setting",
-                Activity.MODE_PRIVATE);
-
-        // 清空参数
-        mIat.setParameter(SpeechConstant.PARAMS, null);
-
-        // 设置听写引擎
-        mIat.setParameter(SpeechConstant.ENGINE_TYPE, mEngineType);
-        // 设置返回结果格式
-        mIat.setParameter(SpeechConstant.RESULT_TYPE, "json");
-
-        this.mTranslateEnable = mSharedPreferences.getBoolean( this.getString(R.string.pref_key_translate), false );
-        if( mTranslateEnable ){
-            Log.i( TAG, "translate enable" );
-            mIat.setParameter( SpeechConstant.ASR_SCH, "1" );
-            mIat.setParameter( SpeechConstant.ADD_CAP, "translate" );
-            mIat.setParameter( SpeechConstant.TRS_SRC, "its" );
-        }
-
-        String lag = mSharedPreferences.getString("iat_language_preference",
-                "mandarin");
-        if (lag.equals("en_us")) {
-            // 设置语言
-            mIat.setParameter(SpeechConstant.LANGUAGE, "en_us");
-            mIat.setParameter(SpeechConstant.ACCENT, null);
-
-            if( mTranslateEnable ){
-                mIat.setParameter( SpeechConstant.ORI_LANG, "en" );
-                mIat.setParameter( SpeechConstant.TRANS_LANG, "cn" );
-            }
-        } else {
-            // 设置语言
-            mIat.setParameter(SpeechConstant.LANGUAGE, "zh_cn");
-            // 设置语言区域
-            mIat.setParameter(SpeechConstant.ACCENT, lag);
-
-            if( mTranslateEnable ){
-                mIat.setParameter( SpeechConstant.ORI_LANG, "cn" );
-                mIat.setParameter( SpeechConstant.TRANS_LANG, "en" );
-            }
-        }
-        //此处用于设置dialog中不显示错误码信息
-        //mIat.setParameter("view_tips_plain","false");
-
-        // 设置语音前端点:静音超时时间，即用户多长时间不说话则当做超时处理
-        mIat.setParameter(SpeechConstant.VAD_BOS, mSharedPreferences.getString("iat_vadbos_preference", "4000"));
-
-        // 设置语音后端点:后端点静音检测时间，即用户停止说话多长时间内即认为不再输入， 自动停止录音
-        mIat.setParameter(SpeechConstant.VAD_EOS, mSharedPreferences.getString("iat_vadeos_preference", "1000"));
-
-        // 设置标点符号,设置为"0"返回结果无标点,设置为"1"返回结果有标点
-        mIat.setParameter(SpeechConstant.ASR_PTT, mSharedPreferences.getString("iat_punc_preference", "1"));
-
-        // 设置音频保存路径，保存音频格式支持pcm、wav，设置路径为sd卡请注意WRITE_EXTERNAL_STORAGE权限
-        // 注：AUDIO_FORMAT参数语记需要更新版本才能生效
-        mIat.setParameter(SpeechConstant.AUDIO_FORMAT,"wav");
-        mIat.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory()+"/msc/iat.wav");
+        mIat = ((SpeechApp) getApplication()).mIat;
+        // 初始化唤醒对象
+        mIvw = ((SpeechApp) getApplication()).mIvw;
+        //语音合成对象
+        mTts = ((SpeechApp) getApplication()).mTts;
+//		mIvw = VoiceWakeuper.createWakeuper(this, null);
+        mToast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
+        findViewById(R.id.button).setOnClickListener(this);
+        findViewById(R.id.btn_hecheng).setOnClickListener(this);
+        findViewById(R.id.btn_daohang).setOnClickListener(this);
+        findViewById(R.id.btn_local).setOnClickListener(this);
+        findViewById(R.id.btn_tongxin).setOnClickListener(this);
+        editText = (EditText) findViewById(R.id.edit_text);
+        result = (EditText) findViewById(R.id.result);
+        et_send = (EditText) findViewById(R.id.et_send);
+        findViewById(R.id.bt_send).setOnClickListener(this);
+        tv_recv = (TextView) findViewById(R.id.tv_recv);
     }
 
     int ret = 0;
-
     @Override
 	public void onClick(View v) {
 		switch (v.getId()) {
@@ -222,24 +184,6 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 			//非空判断，防止因空指针使程序崩溃
 			mIvw = VoiceWakeuper.getWakeuper();
 			if(mIvw != null) {
-				// 清空参数
-				mIvw.setParameter(SpeechConstant.PARAMS, null);
-				// 唤醒门限值，根据资源携带的唤醒词个数按照“id:门限;id:门限”的格式传入
-				mIvw.setParameter(SpeechConstant.IVW_THRESHOLD, "0:"+ curThresh);
-				// 设置唤醒模式
-				mIvw.setParameter(SpeechConstant.IVW_SST, "wakeup");
-				// 设置持续进行唤醒
-				mIvw.setParameter(SpeechConstant.KEEP_ALIVE, keep_alive);
-				// 设置闭环优化网络模式
-				mIvw.setParameter(SpeechConstant.IVW_NET_MODE, ivwNetMode);
-				// 设置唤醒资源路径
-				mIvw.setParameter(SpeechConstant.IVW_RES_PATH, getResource());
-				// 设置唤醒录音保存路径，保存最近一分钟的音频
-				mIvw.setParameter( SpeechConstant.IVW_AUDIO_PATH, Environment.getExternalStorageDirectory().getPath()+"/msc/ivw.wav" );
-				mIvw.setParameter( SpeechConstant.AUDIO_FORMAT, "wav" );
-				// 如有需要，设置 NOTIFY_RECORD_DATA 以实时通过 onEvent 返回录音音频流字节
-				//mIvw.setParameter( SpeechConstant.NOTIFY_RECORD_DATA, "1" );
-				
 				// 启动唤醒
 				mIvw.startListening(mWakeuperListener);
 			} else {
@@ -250,18 +194,119 @@ public class WakeDemo extends Activity implements View.OnClickListener {
                 startActivity(new Intent(WakeDemo.this,TtsDemo.class));
                 break;
             case R.id.btn_daohang:
-                handleResult("df");
+                daoHang();
                 break;
             case R.id.btn_local:
                 weizhi();
                 break;
             case R.id.btn_tongxin:
-                startActivity(new Intent(WakeDemo.this,TongxinDemo.class));
+                startActivity(new Intent(WakeDemo.this,test.class));
+                break;
+            case R.id.bt_send:
+                mySend();
                 break;
 		default:
 			break;
 		}		
 	}
+
+    private void recv() {
+
+//        //单开一个线程循环接收来自服务器端的消息
+//        InputStream inputStream = null;
+//        try {
+//            inputStream = socket.getInputStream();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//        if (inputStream!=null){
+//            try {
+//                byte[] buffer = new byte[1024];
+//                int count = inputStream.read(buffer);//count是传输的字节数
+//                recv_buff = new String(buffer);//socket通信传输的是byte类型，需要转为String类型
+//                JSONObject jsonObject = new JSONObject(recv_buff);
+//                System.out.println(jsonObject.get("1"));
+//                recv_buff = (String) jsonObject.get("1");
+//                //Toast.makeText(this, (String) jsonObject.get("1"), Toast.LENGTH_SHORT).show();
+//
+//
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        //将受到的数据显示在TextView上
+////        if (recv_buff!=null){
+////            handler.post(runnableUi);
+////
+////        }
+        HandleRecInfo handleRecInfo = new HandleRecInfo(socket);
+        handleRecInfo.handleInfo(new ReceiveBack() {
+            @Override
+            public void receiveSelect(int msg) {
+                switch (msg) {
+                    case 1: //回答(小飞小飞，我的位置在哪儿)
+                        recv_buff = msg + "";
+                        int code = mTts.startSpeaking("您的位置再中北大学附近", mTtsListener);
+                        break;
+                    case 2: //回答(小飞小飞，导航去太原理工大学)
+
+                        break;
+                    case 3: //回答(小飞小飞，我的正前方有哪些东西)
+
+                        break;
+                    case 4: //回答(小飞小飞，我指示的东西是什么)
+
+                        break;
+                    case 5: //回答(小飞小飞，现在是红灯还是绿灯)
+
+                        break;
+                    case 6: //回答(小飞小飞，现在几点了)
+
+                        break;
+                    case 7:
+
+                        break;
+                }
+            }
+        });
+
+        //将收到的数据显示在TextView上
+        if (recv_buff!=null){
+            handler.post(runnableUi);
+
+        }
+    }
+
+    private void mySend() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                send_buff = et_send.getText().toString();
+                //向服务器端发送消息
+//                System.out.println("------------------------");
+                OutputStream outputStream=null;
+                try {
+                    outputStream = socket.getOutputStream();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                if(outputStream!=null){
+                    try {
+                        outputStream.write(send_buff.getBytes());
+//                        System.out.println("1111111111111111111111");
+                        outputStream.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+        }).start();
+    }
 
 	private WakeuperListener mWakeuperListener = new WakeuperListener() {
 
@@ -302,25 +347,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 //			showTip("当前音量："+volume);
 		}
 	};
-	
-	@Override
-	protected void onDestroy() {
-		super.onDestroy();
-		Log.d(TAG, "onDestroy WakeDemo");
-		// 销毁合成对象
-		mIvw = VoiceWakeuper.getWakeuper();
-		if (mIvw != null) {
-			mIvw.destroy();
-            mIat.cancel();
-            mIat.destroy();
-		}
-	}
-	
-	private String getResource() {
-		final String resPath = ResourceUtil.generateResourcePath(WakeDemo.this, RESOURCE_TYPE.assets, "ivw/"+getString(R.string.app_id)+".jet");
-		Log.d( TAG, "resPath: "+resPath );
-		return resPath;
-	}
+
 
 	private void showTip(final String str) {
 		runOnUiThread(new Runnable() {
@@ -331,20 +358,6 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 			}
 		});
 	}
-
-    /**
-     * 初始化监听器。
-     */
-    private InitListener mInitListener = new InitListener() {
-
-        @Override
-        public void onInit(int code) {
-            Log.d(TAG, "SpeechRecognizer init() code = " + code);
-            if (code != ErrorCode.SUCCESS) {
-                showTip("初始化失败，错误码：" + code);
-            }
-        }
-    };
 
     /**
      * 听写监听器。
@@ -360,7 +373,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
         public void onError(SpeechError error) {
             // Tips：
             // 错误码：10118(您没有说话)，可能是录音机权限被禁，需要提示用户打开应用的录音权限。
-            if(mTranslateEnable && error.getErrorCode() == 14002) {
+            if(false && error.getErrorCode() == 14002) {
                 showTip( error.getPlainDescription(true)+"\n请确认是否已开通翻译功能" );
             } else {
                 showTip(error.getPlainDescription(true));
@@ -375,11 +388,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
         @Override
         public void onResult(RecognizerResult results, boolean isLast) {
             Log.d(TAG, results.getResultString());
-            if( mTranslateEnable ){
-                printTransResult( results );
-            }else{
-                printResult(results);
-            }
+            printResult(results);
 
             if (isLast) {
                 // TODO 最后的结果
@@ -403,25 +412,54 @@ public class WakeDemo extends Activity implements View.OnClickListener {
     };
 
     private void printResult(RecognizerResult results) {
-        String text = JsonParser.parseIatResult(results.getResultString());
+//        String text = JsonParser.parseIatResult(results.getResultString());
+//
+//        String sn = null;
+//        // 读取json结果中的sn字段
+//        try {
+//            JSONObject resultJson = new JSONObject(results.getResultString());
+//            sn = resultJson.optString("sn");
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
+//
+//        mIatResults.put(sn, text);
+//
+//        StringBuffer resultBuffer = new StringBuffer();
+//        for (String key : mIatResults.keySet()) {
+//            resultBuffer.append(mIatResults.get(key));
+//        }
+//
+//        handleResult(resultBuffer.toString());
+        HandleSend handleSend = new HandleSend(results);
+        handleSend.handleSendInfo(new SendCallBack() {
+            @Override
+            public void handleSend(int Msg) {
+                switch (Msg) {
+                    case 1: //小飞小飞，我的位置在哪儿
+                        weizhi();
+                        break;
+                    case 2: //小飞小飞，导航去***
+                        daoHang();
+                        break;
+                    case 3: //小飞小飞。我的正前方有哪些东西
 
-        String sn = null;
-        // 读取json结果中的sn字段
-        try {
-            JSONObject resultJson = new JSONObject(results.getResultString());
-            sn = resultJson.optString("sn");
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+                        break;
+                    case 4: //小飞小飞，我指示的东西是什么
 
-        mIatResults.put(sn, text);
+                        break;
+                    case 5: //小飞小飞，现在是红灯还是绿灯
 
-        StringBuffer resultBuffer = new StringBuffer();
-        for (String key : mIatResults.keySet()) {
-            resultBuffer.append(mIatResults.get(key));
-        }
+                        break;
+                    case 6: //小飞小飞，现在几点了
 
-        handleResult(resultBuffer.toString());
+                        break;
+                    default:
+
+                        break;
+                }
+            }
+        });
     }
 
     private void printTransResult (RecognizerResult results) {
@@ -454,27 +492,62 @@ public class WakeDemo extends Activity implements View.OnClickListener {
         }
     }
 
-    public void handleResult(String resultStr) {
-//        if (resultStr.contains("手机")) {
-//            result.setText("手机");
-//        } else if (resultStr.contains("导航去")) {
-//            locationService.start();// 定位SDK
-//            String endpoint = resultStr.replace("导航去", "");
-//            Map<String, Double> map = adresstolatlan.getLngAndLat(endpoint);112.449064
-            LatLng pt1 = new LatLng(lat,lng);
-            LatLng pt2 = new LatLng(38.016107,112.449064);
-            // 构建 导航参数
-            NaviParaOption para = new NaviParaOption()
-                    .startPoint(pt1).endPoint(pt2);
+    public void daoHang() {
+        locationService.start();
+        lat = MyBdLocation.getLatitude();
+        lng = MyBdLocation.getLongitude();
 
-            try {
-                BaiduMapNavigation.openBaiduMapWalkNavi(para, getContext());
-            } catch (BaiduMapAppNotSupportNaviException e) {
-                e.printStackTrace();
-            }
-        //}
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+////                try {
+////                    myURL = new URL(url);
+////                    httpsConn = (URLConnection) myURL.openConnection();
+////                    inputStream = httpsConn.getInputStream();
+////                } catch (MalformedURLException e) {
+////                    e.printStackTrace();
+////                } catch (IOException e) {
+////                    e.printStackTrace();
+////                }
+////                if (inputStream!=null){
+////                    try {
+////                        byte[] buffer = new byte[1024];
+////                        int count = inputStream.read(buffer);//count是传输的字节数
+////                        recv_buff2 = new String(buffer);//socket通信传输的是byte类型，需要转为String类型
+////                        JSONObject jsonObject = new JSONObject(recv_buff2);
+////
+////                        pt2lng= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lng");
+////                        pt2lat= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lat");
+//////                        handler.post(runnableUi1);
+////                    } catch (IOException e) {
+////                        e.printStackTrace();
+////                    } catch (JSONException e) {
+////                        e.printStackTrace();
+////                    }
+////                }
+//            }
+//        }).start();
+        Thread daoHangThre = new Thread(new daoHangUrlThre());
+        daoHangThre.start();
+        try {
+            daoHangThre.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        LatLng pt1 = new LatLng(lat,lng);//38.016107,112.449064
+        LatLng pt2 = new LatLng(pt2lat,pt2lng);
+        // 构建 导航参数
+        NaviParaOption para = new NaviParaOption()
+                .startPoint(pt1).endPoint(pt2);
+        try {
+            BaiduMapNavigation.openBaiduMapWalkNavi(para, getContext());
+        } catch (BaiduMapAppNotSupportNaviException e) {
+            e.printStackTrace();
+        }
     }
 
+    //位置实例
     private BDAbstractLocationListener mListener = new BDAbstractLocationListener() {
 
         @Override
@@ -582,7 +655,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
             result.setText(sb.toString());
         }
         locdescription=MyBdLocation.getLocationDescribe();
-        mTts = ((SpeechApp) getApplication()).mTts;
+//        mTts = ((SpeechApp) getApplication()).mTts;
         int code = mTts.startSpeaking(locdescription, mTtsListener);
 //			/**
 //			 * 只保存音频不进行播放接口,调用此接口请注释startSpeaking接口
@@ -660,4 +733,64 @@ public class WakeDemo extends Activity implements View.OnClickListener {
         }
     };
 
+
+    //不能在子线程中刷新UI，应为textView是主线程建立的
+    Runnable runnableUi = new Runnable() {
+        @Override
+        public void run() {
+            tv_recv.append("\n"+recv_buff);
+        }
+    };
+
+    Runnable runnableUi2 = new Runnable() {
+        @Override
+        public void run() {
+            tv_recv.append("\n"+String.valueOf(pt2lat) + String.valueOf(pt2lng));
+        }
+    };
+
+    private class daoHangUrlThre implements Runnable {
+
+        @Override
+        public void run() {
+            try {
+                myURL = new URL(url);
+                httpsConn = (URLConnection) myURL.openConnection();
+                inputStream = httpsConn.getInputStream();
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (inputStream!=null){
+                try {
+                    byte[] buffer = new byte[1024];
+                    int count = inputStream.read(buffer);//count是传输的字节数
+                    recv_buff2 = new String(buffer);//socket通信传输的是byte类型，需要转为String类型
+                    JSONObject jsonObject = new JSONObject(recv_buff2);
+
+                    pt2lng= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lng");
+                    pt2lat= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lat");
+//                        handler.post(runnableUi1);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "onDestroy WakeDemo");
+        // 销毁合成对象
+        mIvw = VoiceWakeuper.getWakeuper();
+        if (mIvw != null) {
+            mIvw.destroy();
+            mIat.cancel();
+            mIat.destroy();
+        }
+    }
 }

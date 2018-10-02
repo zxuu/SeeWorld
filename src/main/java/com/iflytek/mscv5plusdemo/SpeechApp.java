@@ -15,9 +15,11 @@ import com.iflytek.cloud.ErrorCode;
 import com.iflytek.cloud.InitListener;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
+import com.iflytek.cloud.SpeechRecognizer;
 import com.iflytek.cloud.SpeechSynthesizer;
 import com.iflytek.cloud.SpeechUtility;
 import com.iflytek.cloud.SynthesizerListener;
+import com.iflytek.cloud.VoiceWakeuper;
 import com.iflytek.cloud.util.ResourceUtil;
 import com.iflytek.speech.setting.LocationService;
 import com.iflytek.speech.setting.TtsSettings;
@@ -30,6 +32,11 @@ public class SpeechApp extends Application{
 	////////////////Tts//////////////////////
 	// 语音合成对象
 	public SpeechSynthesizer mTts;
+	// 语音唤醒对象
+	public VoiceWakeuper mIvw;
+	// 语音听写对象
+	public SpeechRecognizer mIat;
+	private boolean mTranslateEnable = false;
 
 	// 默认云端发音人
 	public static String voicerCloud="xiaoyan";
@@ -39,6 +46,11 @@ public class SpeechApp extends Application{
 
 	private Toast mToast;
 	public SharedPreferences mSharedPreferences;
+
+	// 设置门限值 ： 门限值越低越容易被唤醒
+	private int curThresh = 1450;
+	private String keep_alive = "1";
+	private String ivwNetMode = "0";
 
 	@Override
 	public void onCreate() {
@@ -67,6 +79,7 @@ public class SpeechApp extends Application{
 		mSharedPreferences = getSharedPreferences(TtsSettings.PREFER_NAME, Activity.MODE_PRIVATE);
 		mToast = Toast.makeText(this,"",Toast.LENGTH_SHORT);
         // 初始化合成对象
+		mIvw = VoiceWakeuper.createWakeuper(this, null);
         setParam();
 	}
 
@@ -158,10 +171,10 @@ public class SpeechApp extends Application{
 	 */
 	public void setParam(){
 		// 清空参数
-		mTts.setParameter(SpeechConstant.PARAMS, null);
-		//设置合成
-		if(mEngineType.equals(SpeechConstant.TYPE_CLOUD))
-		{
+			mTts.setParameter(SpeechConstant.PARAMS, null);
+			//设置合成
+			if(mEngineType.equals(SpeechConstant.TYPE_CLOUD))
+			{
 			//设置使用云端引擎
 			mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
 			//设置发音人
@@ -190,6 +203,86 @@ public class SpeechApp extends Application{
 		// 注：AUDIO_FORMAT参数语记需要更新版本才能生效
 		mTts.setParameter(SpeechConstant.AUDIO_FORMAT, "wav");
 		mTts.setParameter(SpeechConstant.TTS_AUDIO_PATH, Environment.getExternalStorageDirectory()+"/msc/tts.wav");
+
+		// 清空参数
+		mIvw.setParameter(SpeechConstant.PARAMS, null);
+		// 唤醒门限值，根据资源携带的唤醒词个数按照“id:门限;id:门限”的格式传入
+		mIvw.setParameter(SpeechConstant.IVW_THRESHOLD, "0:"+ curThresh);
+		// 设置唤醒模式
+		mIvw.setParameter(SpeechConstant.IVW_SST, "wakeup");
+		// 设置持续进行唤醒
+		mIvw.setParameter(SpeechConstant.KEEP_ALIVE, keep_alive);
+		// 设置闭环优化网络模式
+		mIvw.setParameter(SpeechConstant.IVW_NET_MODE, ivwNetMode);
+		// 设置唤醒资源路径
+		mIvw.setParameter(SpeechConstant.IVW_RES_PATH, getResource());
+		// 设置唤醒录音保存路径，保存最近一分钟的音频
+		mIvw.setParameter( SpeechConstant.IVW_AUDIO_PATH, Environment.getExternalStorageDirectory().getPath()+"/msc/ivw.wav" );
+		mIvw.setParameter( SpeechConstant.AUDIO_FORMAT, "wav" );
+		// 如有需要，设置 NOTIFY_RECORD_DATA 以实时通过 onEvent 返回录音音频流字节
+		//mIvw.setParameter( SpeechConstant.NOTIFY_RECORD_DATA, "1" );
+
+		//--------------------------------------------------------------
+		// 初始化识别无UI识别对象
+		// 使用SpeechRecognizer对象，可根据回调消息自定义界面；
+		mIat = SpeechRecognizer.createRecognizer(this, mInitListener);
+		mSharedPreferences = getSharedPreferences("com.iflytek.setting",
+				Activity.MODE_PRIVATE);
+
+		// 清空参数
+		mIat.setParameter(SpeechConstant.PARAMS, null);
+
+		// 设置听写引擎
+		mIat.setParameter(SpeechConstant.ENGINE_TYPE, mEngineType);
+		// 设置返回结果格式
+		mIat.setParameter(SpeechConstant.RESULT_TYPE, "json");
+
+		this.mTranslateEnable = mSharedPreferences.getBoolean( this.getString(R.string.pref_key_translate), false );
+		if( mTranslateEnable ){
+			Log.i( TAG, "translate enable" );
+			mIat.setParameter( SpeechConstant.ASR_SCH, "1" );
+			mIat.setParameter( SpeechConstant.ADD_CAP, "translate" );
+			mIat.setParameter( SpeechConstant.TRS_SRC, "its" );
+		}
+
+		String lag = mSharedPreferences.getString("iat_language_preference",
+				"mandarin");
+		if (lag.equals("en_us")) {
+			// 设置语言
+			mIat.setParameter(SpeechConstant.LANGUAGE, "en_us");
+			mIat.setParameter(SpeechConstant.ACCENT, null);
+
+			if( mTranslateEnable ){
+				mIat.setParameter( SpeechConstant.ORI_LANG, "en" );
+				mIat.setParameter( SpeechConstant.TRANS_LANG, "cn" );
+			}
+		} else {
+			// 设置语言
+			mIat.setParameter(SpeechConstant.LANGUAGE, "zh_cn");
+			// 设置语言区域
+			mIat.setParameter(SpeechConstant.ACCENT, lag);
+
+			if( mTranslateEnable ){
+				mIat.setParameter( SpeechConstant.ORI_LANG, "cn" );
+				mIat.setParameter( SpeechConstant.TRANS_LANG, "en" );
+			}
+		}
+		//此处用于设置dialog中不显示错误码信息
+		//mIat.setParameter("view_tips_plain","false");
+
+		// 设置语音前端点:静音超时时间，即用户多长时间不说话则当做超时处理
+		mIat.setParameter(SpeechConstant.VAD_BOS, mSharedPreferences.getString("iat_vadbos_preference", "4000"));
+
+		// 设置语音后端点:后端点静音检测时间，即用户停止说话多长时间内即认为不再输入， 自动停止录音
+		mIat.setParameter(SpeechConstant.VAD_EOS, mSharedPreferences.getString("iat_vadeos_preference", "1000"));
+
+		// 设置标点符号,设置为"0"返回结果无标点,设置为"1"返回结果有标点
+		mIat.setParameter(SpeechConstant.ASR_PTT, mSharedPreferences.getString("iat_punc_preference", "1"));
+
+		// 设置音频保存路径，保存音频格式支持pcm、wav，设置路径为sd卡请注意WRITE_EXTERNAL_STORAGE权限
+		// 注：AUDIO_FORMAT参数语记需要更新版本才能生效
+		mIat.setParameter(SpeechConstant.AUDIO_FORMAT,"wav");
+		mIat.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory()+"/msc/iat.wav");
 	}
 
 	//获取发音人资源路径
@@ -202,4 +295,24 @@ public class SpeechApp extends Application{
 		tempBuffer.append(ResourceUtil.generateResourcePath(this, ResourceUtil.RESOURCE_TYPE.assets, "tts/"+ TtsDemo.voicerLocal+".jet"));
 		return tempBuffer.toString();
 	}
+
+	private String getResource() {
+		final String resPath = ResourceUtil.generateResourcePath(this, ResourceUtil.RESOURCE_TYPE.assets, "ivw/"+getString(R.string.app_id)+".jet");
+		Log.d( TAG, "resPath: "+resPath );
+		return resPath;
+	}
+
+	/**
+	 * 初始化监听器。
+	 */
+	private InitListener mInitListener = new InitListener() {
+
+		@Override
+		public void onInit(int code) {
+			Log.d(TAG, "SpeechRecognizer init() code = " + code);
+			if (code != ErrorCode.SUCCESS) {
+//				showTip("初始化失败，错误码：" + code);
+			}
+		}
+	};
 }
