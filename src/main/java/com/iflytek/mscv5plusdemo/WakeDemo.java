@@ -3,7 +3,6 @@ package com.iflytek.mscv5plusdemo;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,10 +23,11 @@ import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.navi.BaiduMapAppNotSupportNaviException;
 import com.baidu.mapapi.navi.BaiduMapNavigation;
 import com.baidu.mapapi.navi.NaviParaOption;
+import com.iflytek.Test.GetPiIP;
+import com.iflytek.Test.test;
 import com.iflytek.cloud.ErrorCode;
 import com.iflytek.cloud.RecognizerListener;
 import com.iflytek.cloud.RecognizerResult;
-import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechEvent;
 import com.iflytek.cloud.SpeechRecognizer;
@@ -37,11 +37,9 @@ import com.iflytek.cloud.VoiceWakeuper;
 import com.iflytek.cloud.WakeuperListener;
 import com.iflytek.cloud.WakeuperResult;
 import com.iflytek.speech.setting.LocationService;
-import com.iflytek.speech.util.GetLatLng;
 import com.iflytek.speech.util.HandleRecInfo;
 import com.iflytek.speech.util.HandleSend;
 import com.iflytek.speech.util.JsonParser;
-import com.iflytek.speech.util.adresstolatlan;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -49,14 +47,10 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import static com.baidu.mapapi.BMapManager.getContext;
 
@@ -88,12 +82,15 @@ public class WakeDemo extends Activity implements View.OnClickListener {
     //------------------------------
     double ptlat=0;
     double ptlng=0;
-
-    String url = "http://api.map.baidu.com/geocoder/v2/?address=中北大学&output=json&ak=GY8rADx7a5mi8qVU1Kz755c2GU05Arnw&mcode=51:E8:27:D4:BA:68:4F:98:D0:42:F8:92:31:22:EC:61:D1:EE:D7:8E;com.iflytek.mscv5plusdemo";
+    //------------------------------
+    String myAdrres;
+    String url = null;
     String recv_buff2 = null;
+    String destination = null;
     URL myURL = null;
     URLConnection httpsConn = null;
     InputStream inputStream = null;
+    HandleSend handleSend; //指令帮助类
     double pt2lat = 8.0;
     double pt2lng = 0.0;
 
@@ -194,13 +191,14 @@ public class WakeDemo extends Activity implements View.OnClickListener {
                 startActivity(new Intent(WakeDemo.this,TtsDemo.class));
                 break;
             case R.id.btn_daohang:
+                destination = "中北大学";
                 daoHang();
                 break;
             case R.id.btn_local:
                 weizhi();
                 break;
             case R.id.btn_tongxin:
-                startActivity(new Intent(WakeDemo.this,test.class));
+                startActivity(new Intent(WakeDemo.this,GetPiIP.class));
                 break;
             case R.id.bt_send:
                 mySend();
@@ -431,7 +429,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 //        }
 //
 //        handleResult(resultBuffer.toString());
-        HandleSend handleSend = new HandleSend(results);
+        handleSend = new HandleSend(results);
         handleSend.handleSendInfo(new SendCallBack() {
             @Override
             public void handleSend(int Msg) {
@@ -440,6 +438,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
                         weizhi();
                         break;
                     case 2: //小飞小飞，导航去***
+                        destination = handleSend.getDestination();
                         daoHang();
                         break;
                     case 3: //小飞小飞。我的正前方有哪些东西
@@ -723,6 +722,8 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 
         @Override
         public void run() {
+            //String url = "http://api.map.baidu.com/geocoder/v2/?address=中北大学&output=json&ak=GY8rADx7a5mi8qVU1Kz755c2GU05Arnw&mcode=51:E8:27:D4:BA:68:4F:98:D0:42:F8:92:31:22:EC:61:D1:EE:D7:8E;com.iflytek.mscv5plusdemo";
+            url = "http://api.map.baidu.com/geocoder/v2/?address=" + destination + "&output=json&ak=GY8rADx7a5mi8qVU1Kz755c2GU05Arnw&mcode=51:E8:27:D4:BA:68:4F:98:D0:42:F8:92:31:22:EC:61:D1:EE:D7:8E;com.iflytek.mscv5plusdemo";
             try {
                 myURL = new URL(url);
                 httpsConn = (URLConnection) myURL.openConnection();
@@ -755,6 +756,11 @@ public class WakeDemo extends Activity implements View.OnClickListener {
     protected void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "onDestroy WakeDemo");
+        if( null != mTts ){
+            mTts.stopSpeaking();
+            // 退出时释放连接
+            mTts.destroy();
+        }
         // 销毁合成对象
         mIvw = VoiceWakeuper.getWakeuper();
         if (mIvw != null) {

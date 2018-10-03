@@ -1,4 +1,4 @@
-package com.iflytek.mscv5plusdemo;
+package com.iflytek.Test;
 
 import android.app.Activity;
 import android.os.Handler;
@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import com.iflytek.mscv5plusdemo.R;
 
 import org.json.JSONException;
 import org.json.JSONObject;

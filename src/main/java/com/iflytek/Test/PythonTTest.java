@@ -1,4 +1,4 @@
-package com.iflytek.mscv5plusdemo;
+package com.iflytek.Test;
 
 import android.app.Activity;
 import android.os.Handler;
@@ -8,6 +8,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import com.iflytek.mscv5plusdemo.R;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -69,7 +71,7 @@ public class PythonTTest extends Activity implements View.OnClickListener{
                             }
                         }
                     } else {
-                        Toast.makeText(PythonTTest.this, "server null", Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(PythonTTest.this, "server null", Toast.LENGTH_SHORT).show();
                     }
 //                    while (true) {
 //                        try {

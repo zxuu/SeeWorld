@@ -13,6 +13,7 @@ public class HandleSend {
     RecognizerResult results = null;
     String text = null;
     String sn = null;
+    String destination = null;
     int sendMsg;
     // 用HashMap存储听写结果
     private HashMap<String, String> mIatResults = new LinkedHashMap<String, String>();
@@ -34,7 +35,8 @@ public class HandleSend {
         for (String key : mIatResults.keySet()) {
             resultBuffer.append(mIatResults.get(key));
         }
-        selectResulrBuf(resultBuffer.toString());
+        destination = resultBuffer.toString();
+        selectResulrBuf(destination);
     }
 
     private void selectResulrBuf(String result) {
@@ -55,5 +57,10 @@ public class HandleSend {
 
     public void handleSendInfo(SendCallBack sendCallBack) {
         sendCallBack.handleSend(sendMsg);
+    }
+
+    public String getDestination() {
+
+        return destination.replace("导航去", "");
     }
 }

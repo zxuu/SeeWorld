@@ -60,8 +60,9 @@
             android:name="com.baidu.lbsapi.API_KEY"
             android:value="GY8rADx7a5mi8qVU1Kz755c2GU05Arnw" /> <!-- http://lbsyun.baidu.com/apiconsole/key -->
         <activity android:name=".TongxinDemo" />
-        <activity android:name=".PythonTTest" />
-        <activity android:name=".test"></activity>
+        <activity android:name="com.iflytek.Test.PythonTTest" />
+        <activity android:name="com.iflytek.Test.test" />
+        <activity android:name="com.iflytek.Test.GetPiIP"></activity>
     </application>
 
 </manifest>
