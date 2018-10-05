@@ -292,7 +292,7 @@ public class SpeechApp extends Application{
 		tempBuffer.append(ResourceUtil.generateResourcePath(this, ResourceUtil.RESOURCE_TYPE.assets, "tts/common.jet"));
 		tempBuffer.append(";");
 		//发音人资源
-		tempBuffer.append(ResourceUtil.generateResourcePath(this, ResourceUtil.RESOURCE_TYPE.assets, "tts/"+ TtsDemo.voicerLocal+".jet"));
+		tempBuffer.append(ResourceUtil.generateResourcePath(this, ResourceUtil.RESOURCE_TYPE.assets, "tts/"+ TtsDemoActivity.voicerLocal+".jet"));
 		return tempBuffer.toString();
 	}
 

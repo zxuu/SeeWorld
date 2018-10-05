@@ -14,15 +14,11 @@ import com.iflytek.cloud.SpeechSynthesizer;
 import com.iflytek.cloud.SynthesizerListener;
 import com.iflytek.speech.util.HandleRecInfo;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-public class TongxinDemo extends Activity implements View.OnClickListener{
+public class TongxinDemoActivity extends Activity implements View.OnClickListener{
     private EditText et_send;
     private Button bt_send;
     private TextView tv_recv;
@@ -270,9 +266,9 @@ public class TongxinDemo extends Activity implements View.OnClickListener{
         @Override
         public void onCompleted(SpeechError error) {
             if (error == null) {
-                Toast.makeText(TongxinDemo.this, "完成", Toast.LENGTH_SHORT).show();
+                Toast.makeText(TongxinDemoActivity.this, "完成", Toast.LENGTH_SHORT).show();
             } else if (error != null) {
-                Toast.makeText(TongxinDemo.this, error.getPlainDescription(true), Toast.LENGTH_SHORT).show();
+                Toast.makeText(TongxinDemoActivity.this, error.getPlainDescription(true), Toast.LENGTH_SHORT).show();
             }
         }
 

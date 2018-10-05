@@ -3,6 +3,7 @@ package com.iflytek.mscv5plusdemo;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -12,6 +13,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -24,7 +26,6 @@ import com.baidu.mapapi.navi.BaiduMapAppNotSupportNaviException;
 import com.baidu.mapapi.navi.BaiduMapNavigation;
 import com.baidu.mapapi.navi.NaviParaOption;
 import com.iflytek.Test.GetPiIP;
-import com.iflytek.Test.test;
 import com.iflytek.cloud.ErrorCode;
 import com.iflytek.cloud.RecognizerListener;
 import com.iflytek.cloud.RecognizerResult;
@@ -37,6 +38,7 @@ import com.iflytek.cloud.VoiceWakeuper;
 import com.iflytek.cloud.WakeuperListener;
 import com.iflytek.cloud.WakeuperResult;
 import com.iflytek.speech.setting.LocationService;
+import com.iflytek.speech.util.GetPiIputil;
 import com.iflytek.speech.util.HandleRecInfo;
 import com.iflytek.speech.util.HandleSend;
 import com.iflytek.speech.util.JsonParser;
@@ -54,11 +56,12 @@ import java.net.URLConnection;
 
 import static com.baidu.mapapi.BMapManager.getContext;
 
-public class WakeDemo extends Activity implements View.OnClickListener {
+public class WakeDemoActivity extends Activity implements View.OnClickListener {
 	private String TAG = "ivw";
 	private Toast mToast;
 	private EditText editText;
 	private EditText result;
+	BootCompleteReceiver mOnepxReceiver;
 	// 语音唤醒对象
 	private VoiceWakeuper mIvw;
     /////////////////////////////////
@@ -84,6 +87,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
     double ptlng=0;
     //------------------------------
     String myAdrres;
+    String piIP;
     String url = null;
     String recv_buff2 = null;
     String destination = null;
@@ -98,7 +102,9 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
-		setContentView(R.layout.wake_activity);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setContentView(R.layout.wake_activity);
+
 		requestPermissions();
 		init();
 		initmap();
@@ -109,7 +115,8 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 //            public void run() {
 //
 //                try {
-//                    socket = new Socket("192.168.42.233" , 7654);
+//                    piIP = GetPiIputil.getConnectedIP().get(0);
+//                    socket = new Socket(piIP , 7654);
 //                } catch (IOException e) {
 //                    e.printStackTrace();
 //                }
@@ -122,6 +129,9 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 //                    System.out.println("socket is null");
 //            }
 //        }).start();
+
+        //单开一个线程查看IP地址是否变化
+        monitorIPThread();
 	}
 
     private void initmap() {
@@ -154,6 +164,12 @@ public class WakeDemo extends Activity implements View.OnClickListener {
     }
 
     private void init() {
+        //注册监听屏幕的广播
+//        IntentFilter filter = new IntentFilter();
+//        filter.addAction(Intent.ACTION_SCREEN_ON);
+//        filter.addAction(Intent.ACTION_SCREEN_OFF);
+//        registerReceiver(new BootCompleteReceiver(),filter);
+        //------------------------------------------------------------
         mIat = ((SpeechApp) getApplication()).mIat;
         // 初始化唤醒对象
         mIvw = ((SpeechApp) getApplication()).mIvw;
@@ -171,6 +187,8 @@ public class WakeDemo extends Activity implements View.OnClickListener {
         et_send = (EditText) findViewById(R.id.et_send);
         findViewById(R.id.bt_send).setOnClickListener(this);
         tv_recv = (TextView) findViewById(R.id.tv_recv);
+
+        myAdrres = GetPiIputil.getIPAdress(getContext());
     }
 
     int ret = 0;
@@ -188,7 +206,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
 			}
 			break;
             case R.id.btn_hecheng:
-                startActivity(new Intent(WakeDemo.this,TtsDemo.class));
+                startActivity(new Intent(WakeDemoActivity.this,TtsDemoActivity.class));
                 break;
             case R.id.btn_daohang:
                 destination = "中北大学";
@@ -198,7 +216,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
                 weizhi();
                 break;
             case R.id.btn_tongxin:
-                startActivity(new Intent(WakeDemo.this,GetPiIP.class));
+                startActivity(new Intent(WakeDemoActivity.this,GetPiIP.class));
                 break;
             case R.id.bt_send:
                 mySend();
@@ -461,18 +479,6 @@ public class WakeDemo extends Activity implements View.OnClickListener {
         });
     }
 
-    private void printTransResult (RecognizerResult results) {
-        String trans  = JsonParser.parseTransResult(results.getResultString(),"dst");
-        String oris = JsonParser.parseTransResult(results.getResultString(),"src");
-
-        if( TextUtils.isEmpty(trans)|| TextUtils.isEmpty(oris) ){
-            showTip( "解析结果失败，请确认是否已开通翻译功能。" );
-        }else{
-            Log.d(TAG, "printTransResult: "+"原始语言:\n"+oris+"\n目标语言:\n"+trans);
-        }
-
-    }
-
     private void requestPermissions(){
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -714,7 +720,7 @@ public class WakeDemo extends Activity implements View.OnClickListener {
     Runnable runnableUi2 = new Runnable() {
         @Override
         public void run() {
-            tv_recv.append("\n"+String.valueOf(pt2lat) + String.valueOf(pt2lng));
+            tv_recv.append("\n"+"ipchange");
         }
     };
 
@@ -752,10 +758,52 @@ public class WakeDemo extends Activity implements View.OnClickListener {
         }
     }
 
+    private void monitorIPThread() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    if (!myAdrres.equals(GetPiIputil.getIPAdress(getContext()))) {
+                        myAdrres = GetPiIputil.getIPAdress(getContext());
+                        handler.post(runnableUi2);
+                        int code = mTts.startSpeaking("您的ip地址发生了变化，请稍等", mTtsListener);
+//                        if (code != ErrorCode.SUCCESS) {
+//                            showTip("语音合成失败,错误码: " + code);
+//                        }
+                    }
+                }
+            }
+        }).start();
+    }
+
+    private void printTransResult (RecognizerResult results) {
+        String trans  = JsonParser.parseTransResult(results.getResultString(),"dst");
+        String oris = JsonParser.parseTransResult(results.getResultString(),"src");
+
+        if( TextUtils.isEmpty(trans)|| TextUtils.isEmpty(oris) ){
+            showTip( "解析结果失败，请确认是否已开通翻译功能。" );
+        }else{
+            Log.d(TAG, "printTransResult: "+"原始语言:\n"+oris+"\n目标语言:\n"+trans);
+        }
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, "wakedemoonPause: ...............................");
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        Log.d(TAG, "WakeDenoonRestart: restar.........................");
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "onDestroy WakeDemo");
+        Log.d(TAG, "onDestroy WakeDemoActivity");
         if( null != mTts ){
             mTts.stopSpeaking();
             // 退出时释放连接

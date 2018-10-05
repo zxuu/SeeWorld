@@ -38,7 +38,7 @@
         <activity android:name="com.iflytek.speech.setting.TtsSettings" />
         <activity android:name="com.iflytek.speech.setting.IatSettings" />
         <activity
-            android:name=".WakeDemo"
+            android:name=".WakeDemoActivity"
             android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|orientation|screenLayout|fontScale"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -47,7 +47,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".TtsDemo" />
+        <activity android:name=".TtsDemoActivity" />
 
         <service
             android:name="com.baidu.location.f"
@@ -59,10 +59,26 @@
         <meta-data
             android:name="com.baidu.lbsapi.API_KEY"
             android:value="GY8rADx7a5mi8qVU1Kz755c2GU05Arnw" /> <!-- http://lbsyun.baidu.com/apiconsole/key -->
-        <activity android:name=".TongxinDemo" />
+        <activity android:name=".TongxinDemoActivity" />
         <activity android:name="com.iflytek.Test.PythonTTest" />
         <activity android:name="com.iflytek.Test.test" />
-        <activity android:name="com.iflytek.Test.GetPiIP"></activity>
+        <activity android:name="com.iflytek.Test.GetPiIP" />
+
+        <service
+            android:name=".IpChangeService"
+            android:enabled="true"
+            android:exported="true"
+            android:process=":remote"></service>
+
+        <activity
+            android:name=".HooliganActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize|navigation|keyboard"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:finishOnTaskLaunch="false"
+            android:launchMode="singleInstance"
+            android:theme="@style/HooliganActivityStyle"></activity>
+
     </application>
 
 </manifest>

@@ -7,11 +7,11 @@ import android.net.DhcpInfo;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.EditText;
 
 import com.iflytek.mscv5plusdemo.R;
+import com.iflytek.speech.util.GetPiIputil;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -37,7 +37,7 @@ public class GetPiIP extends Activity {
 
         initinfo();
         ips = getConnectedIP();
-        editTextip.setText(ips.get(0));
+        editTextip.setText(GetPiIputil.getIPAdress(this));
     }
 
     private void initinfo() {

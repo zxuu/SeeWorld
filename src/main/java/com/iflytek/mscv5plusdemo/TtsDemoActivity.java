@@ -2,39 +2,22 @@ package com.iflytek.mscv5plusdemo;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Environment;
-import android.text.Spannable;
-import android.text.SpannableStringBuilder;
-import android.text.style.BackgroundColorSpan;
-import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
 import android.widget.EditText;
-import android.widget.RadioGroup;
-import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.Toast;
 
 import com.iflytek.cloud.ErrorCode;
-import com.iflytek.cloud.InitListener;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechSynthesizer;
 import com.iflytek.cloud.SynthesizerListener;
-import com.iflytek.cloud.util.ResourceUtil;
-import com.iflytek.cloud.util.ResourceUtil.RESOURCE_TYPE;
-import com.iflytek.speech.setting.TtsSettings;
 
-import static android.content.ContentValues.TAG;
-
-public class TtsDemo extends Activity implements OnClickListener {
-	private static String TAG = TtsDemo.class.getSimpleName();
+public class TtsDemoActivity extends Activity implements OnClickListener {
+	private static String TAG = TtsDemoActivity.class.getSimpleName();
 	// 语音合成对象
 	private SpeechSynthesizer mTts;
 
