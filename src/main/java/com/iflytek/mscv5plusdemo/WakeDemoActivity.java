@@ -102,6 +102,7 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
+//        getWindow().setStatusBarColor(this.getResources().getColor(R.color.title_color));
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.wake_activity);
 
@@ -165,10 +166,10 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 
     private void init() {
         //注册监听屏幕的广播
-//        IntentFilter filter = new IntentFilter();
-//        filter.addAction(Intent.ACTION_SCREEN_ON);
-//        filter.addAction(Intent.ACTION_SCREEN_OFF);
-//        registerReceiver(new BootCompleteReceiver(),filter);
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+        registerReceiver(new BootCompleteReceiver(),filter);
         //------------------------------------------------------------
         mIat = ((SpeechApp) getApplication()).mIat;
         // 初始化唤醒对象
@@ -219,7 +220,8 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
                 startActivity(new Intent(WakeDemoActivity.this,GetPiIP.class));
                 break;
             case R.id.bt_send:
-                mySend();
+//                mySend();
+                startActivity(new Intent(this, com.iflytek.Test.Button.class));
                 break;
 		default:
 			break;

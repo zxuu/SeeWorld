@@ -34,7 +34,7 @@
     <application
         android:name=".SpeechApp"
         android:icon="@drawable/icon"
-        android:label="讯飞语音示例v5+">
+        android:label="SeeWorld">
         <activity android:name="com.iflytek.speech.setting.TtsSettings" />
         <activity android:name="com.iflytek.speech.setting.IatSettings" />
         <activity
@@ -68,7 +68,7 @@
             android:name=".IpChangeService"
             android:enabled="true"
             android:exported="true"
-            android:process=":remote"></service>
+            android:process=":remote" />
 
         <activity
             android:name=".HooliganActivity"
@@ -77,8 +77,8 @@
             android:exported="false"
             android:finishOnTaskLaunch="false"
             android:launchMode="singleInstance"
-            android:theme="@style/HooliganActivityStyle"></activity>
-
+            android:theme="@style/HooliganActivityStyle" />
+        <activity android:name="com.iflytek.Test.Button"></activity>
     </application>
 
 </manifest>
