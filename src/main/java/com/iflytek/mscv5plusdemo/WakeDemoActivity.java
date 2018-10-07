@@ -39,6 +39,7 @@ import com.iflytek.cloud.WakeuperListener;
 import com.iflytek.cloud.WakeuperResult;
 import com.iflytek.speech.setting.LocationService;
 import com.iflytek.speech.util.GetPiIputil;
+import com.iflytek.speech.util.GetTime;
 import com.iflytek.speech.util.HandleRecInfo;
 import com.iflytek.speech.util.HandleSend;
 import com.iflytek.speech.util.JsonParser;
@@ -53,6 +54,7 @@ import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Calendar;
 
 import static com.baidu.mapapi.BMapManager.getContext;
 
@@ -104,12 +106,22 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 //        getWindow().setStatusBarColor(this.getResources().getColor(R.color.title_color));
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        setContentView(R.layout.wake_activity);
+        setContentView(R.layout.test);
 
 		requestPermissions();
 		init();
 		initmap();
         handler = new Handler();
+        //------------------------------
+        //非空判断，防止因空指针使程序崩溃
+        mIvw = VoiceWakeuper.getWakeuper();
+        if(mIvw != null) {
+            // 启动唤醒
+            mIvw.startListening(mWakeuperListener);
+        } else {
+            showTip("唤醒未初始化");
+        }
+        //--------------------------------
         //单开一个线程来进行socket通信
 //        new Thread(new Runnable() {
 //            @Override
@@ -178,11 +190,12 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
         mTts = ((SpeechApp) getApplication()).mTts;
 //		mIvw = VoiceWakeuper.createWakeuper(this, null);
         mToast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
-        findViewById(R.id.button).setOnClickListener(this);
-        findViewById(R.id.btn_hecheng).setOnClickListener(this);
+        findViewById(R.id.btn_weizhi).setOnClickListener(this);
         findViewById(R.id.btn_daohang).setOnClickListener(this);
-        findViewById(R.id.btn_local).setOnClickListener(this);
-        findViewById(R.id.btn_tongxin).setOnClickListener(this);
+        findViewById(R.id.btn_zhishi).setOnClickListener(this);
+        findViewById(R.id.btn_qianfang).setOnClickListener(this);
+        findViewById(R.id.btn_hldong).setOnClickListener(this);
+        findViewById(R.id.btn_shijian).setOnClickListener(this);
         editText = (EditText) findViewById(R.id.edit_text);
         result = (EditText) findViewById(R.id.result);
         et_send = (EditText) findViewById(R.id.et_send);
@@ -196,25 +209,37 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     @Override
 	public void onClick(View v) {
 		switch (v.getId()) {
-		case R.id.button:
-			//非空判断，防止因空指针使程序崩溃
-			mIvw = VoiceWakeuper.getWakeuper();
-			if(mIvw != null) {
-				// 启动唤醒
-				mIvw.startListening(mWakeuperListener);
-			} else {
-				showTip("唤醒未初始化");
-			}
-			break;
-            case R.id.btn_hecheng:
-                startActivity(new Intent(WakeDemoActivity.this,TtsDemoActivity.class));
-                break;
+//		case R.id.button:
+////			//非空判断，防止因空指针使程序崩溃
+////			mIvw = VoiceWakeuper.getWakeuper();
+////			if(mIvw != null) {
+////				// 启动唤醒
+////				mIvw.startListening(mWakeuperListener);
+////			} else {
+////				showTip("唤醒未初始化");
+////			}
+//			break;
+//            case R.id.btn_hecheng:
+//                startActivity(new Intent(WakeDemoActivity.this,TtsDemoActivity.class));
+//                break;
             case R.id.btn_daohang:
                 destination = "中北大学";
                 daoHang();
                 break;
-            case R.id.btn_local:
+            case R.id.btn_weizhi:
                 weizhi();
+                break;
+            case R.id.btn_zhishi:
+
+                break;
+            case R.id.btn_qianfang:
+
+                break;
+            case R.id.btn_hldong:
+
+                break;
+            case R.id.btn_shijian:
+                int code = mTts.startSpeaking(GetTime.getTime(), mTtsListener);
                 break;
             case R.id.btn_tongxin:
                 startActivity(new Intent(WakeDemoActivity.this,GetPiIP.class));
