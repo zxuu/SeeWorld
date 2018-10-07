@@ -23,6 +23,10 @@ import com.iflytek.cloud.VoiceWakeuper;
 import com.iflytek.cloud.util.ResourceUtil;
 import com.iflytek.speech.setting.LocationService;
 import com.iflytek.speech.setting.TtsSettings;
+import com.iflytek.speech.util.GetPiIputil;
+
+import java.io.IOException;
+import java.net.Socket;
 
 import static android.content.ContentValues.TAG;
 
@@ -37,6 +41,9 @@ public class SpeechApp extends Application{
 	// 语音听写对象
 	public SpeechRecognizer mIat;
 	private boolean mTranslateEnable = false;
+
+	public Socket socket;
+	public String piIP;
 
 	// 默认云端发音人
 	public static String voicerCloud="xiaoyan";
@@ -81,6 +88,7 @@ public class SpeechApp extends Application{
         // 初始化合成对象
 		mIvw = VoiceWakeuper.createWakeuper(this, null);
         setParam();
+        getSocket();
 	}
 
 	/**
@@ -315,4 +323,18 @@ public class SpeechApp extends Application{
 			}
 		}
 	};
+
+	public void getSocket() {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				piIP = GetPiIputil.getConnectedIP().get(0);
+				try {
+					socket = new Socket(piIP , 7654);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
+	}
 }

@@ -46,12 +46,14 @@ public class HandleSend {
             sendMsg = 2;
         } else if (result.contains("正前方")) {
             sendMsg = 3;
-        } else if (result.contains("指示")) {
+        } else if (result.contains("手指")) {
             sendMsg = 4;
-        } else if (result.contains("红灯绿灯")) {
+        } else if (result.contains("红绿灯")) {
             sendMsg = 5;
         } else if (result.contains("几点")) {
             sendMsg = 6;
+        } else if (result.contains("手机")) {
+            sendMsg = 7;
         }
     }
 

@@ -25,7 +25,6 @@ import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.navi.BaiduMapAppNotSupportNaviException;
 import com.baidu.mapapi.navi.BaiduMapNavigation;
 import com.baidu.mapapi.navi.NaviParaOption;
-import com.iflytek.Test.GetPiIP;
 import com.iflytek.cloud.ErrorCode;
 import com.iflytek.cloud.RecognizerListener;
 import com.iflytek.cloud.RecognizerResult;
@@ -52,6 +51,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Calendar;
@@ -83,7 +83,7 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     private String send_buff=null;
     private String recv_buff=null;
     private Handler handler = null;
-    Socket socket = null;
+//    Socket socket = null;
     //------------------------------
     double ptlat=0;
     double ptlng=0;
@@ -99,8 +99,9 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     HandleSend handleSend; //指令帮助类
     double pt2lat = 8.0;
     double pt2lng = 0.0;
+    private Thread socketConnect;
 
-	@Override
+    @Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -123,25 +124,25 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
         }
         //--------------------------------
         //单开一个线程来进行socket通信
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+
 //                try {
 //                    piIP = GetPiIputil.getConnectedIP().get(0);
 //                    socket = new Socket(piIP , 7654);
 //                } catch (IOException e) {
 //                    e.printStackTrace();
 //                }
-//                if (socket!=null) {
-//                    System.out.println("###################");
-//                    while (true) {      //循环进行收发
-//                        recv();
-//                    }
-//                } else
-//                    System.out.println("socket is null");
-//            }
-//        }).start();
+                if (((SpeechApp) getApplication()).socket!=null) {
+                    System.out.println("###################");
+                    while (true) {      //循环进行收发
+                        recv();
+                    }
+                } else
+                    System.out.println("socket is null");
+            }
+        }).start();
 
         //单开一个线程查看IP地址是否变化
         monitorIPThread();
@@ -196,9 +197,10 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
         findViewById(R.id.btn_qianfang).setOnClickListener(this);
         findViewById(R.id.btn_hldong).setOnClickListener(this);
         findViewById(R.id.btn_shijian).setOnClickListener(this);
+//        findViewById(R.id.btn_tongxin).setOnClickListener(this);
         editText = (EditText) findViewById(R.id.edit_text);
         result = (EditText) findViewById(R.id.result);
-        et_send = (EditText) findViewById(R.id.et_send);
+//        et_send = (EditText) findViewById(R.id.et_send);
         findViewById(R.id.bt_send).setOnClickListener(this);
         tv_recv = (TextView) findViewById(R.id.tv_recv);
 
@@ -230,23 +232,23 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
                 weizhi();
                 break;
             case R.id.btn_zhishi:
-
+                mySend(4);
                 break;
             case R.id.btn_qianfang:
-
+                mySend(3);
                 break;
             case R.id.btn_hldong:
-
+                mySend(5);
                 break;
             case R.id.btn_shijian:
                 int code = mTts.startSpeaking(GetTime.getTime(), mTtsListener);
                 break;
-            case R.id.btn_tongxin:
-                startActivity(new Intent(WakeDemoActivity.this,GetPiIP.class));
-                break;
+//            case R.id.btn_tongxin:
+//                startActivity(new Intent(WakeDemoActivity.this,GetPiIP.class));
+//                break;
             case R.id.bt_send:
-//                mySend();
-                startActivity(new Intent(this, com.iflytek.Test.Button.class));
+                mySend(4);
+//                startActivity(new Intent(this, com.iflytek.Test.Button.class));
                 break;
 		default:
 			break;
@@ -285,7 +287,7 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 ////            handler.post(runnableUi);
 ////
 ////        }
-        HandleRecInfo handleRecInfo = new HandleRecInfo(socket);
+        final HandleRecInfo handleRecInfo = new HandleRecInfo(((SpeechApp)getApplication()).socket);
         handleRecInfo.handleInfo(new ReceiveBack() {
             @Override
             public void receiveSelect(int msg) {
@@ -294,17 +296,22 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
                         recv_buff = msg + "";
                         int code = mTts.startSpeaking("您的位置再中北大学附近", mTtsListener);
                         break;
-                    case 2: //回答(小飞小飞，导航去太原理工大学)
+                    case 2: //回答(小飞小飞，导航去***)
 
                         break;
                     case 3: //回答(小飞小飞，我的正前方有哪些东西)
-
+                        String thingsStr = handleRecInfo.getThings();
+                        recv_buff = msg + thingsStr;
+                        result.setText(thingsStr);
+                        int code3 = mTts.startSpeaking(thingsStr, mTtsListener);
                         break;
                     case 4: //回答(小飞小飞，我指示的东西是什么)
-
+                        recv_buff = msg + "";
+                        int code4 = mTts.startSpeaking(handleRecInfo.getThing(), mTtsListener);
                         break;
                     case 5: //回答(小飞小飞，现在是红灯还是绿灯)
-
+                        recv_buff = msg + "";
+                        int code5 = mTts.startSpeaking(handleRecInfo.getThing(), mTtsListener);
                         break;
                     case 6: //回答(小飞小飞，现在几点了)
 
@@ -323,23 +330,31 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
         }
     }
 
-    private void mySend() {
+    private void mySend(final int code) {
+//        socketConnect = new Thread(new SocketConnect());
+//        socketConnect.start();
+
         new Thread(new Runnable() {
             @Override
             public void run() {
-                send_buff = et_send.getText().toString();
+//                try {
+//                    socketConnect.join();
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+                send_buff = editText.getText().toString();
                 //向服务器端发送消息
 //                System.out.println("------------------------");
                 OutputStream outputStream=null;
                 try {
-                    outputStream = socket.getOutputStream();
+                    outputStream = ((SpeechApp) getApplication()).socket.getOutputStream();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
 
                 if(outputStream!=null){
                     try {
-                        outputStream.write(send_buff.getBytes());
+                        outputStream.write(String.valueOf(code).getBytes());
 //                        System.out.println("1111111111111111111111");
                         outputStream.flush();
                     } catch (IOException e) {
@@ -440,7 +455,7 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 
         @Override
         public void onVolumeChanged(int volume, byte[] data) {
-            Log.d(TAG, "返回音频数据："+data.length);
+//            Log.d(TAG, "返回音频数据："+data.length);
         }
 
         @Override
@@ -490,13 +505,22 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 
                         break;
                     case 4: //小飞小飞，我指示的东西是什么
-
+                        mySend(4);
                         break;
                     case 5: //小飞小飞，现在是红灯还是绿灯
-
+                        mySend(5);
                         break;
                     case 6: //小飞小飞，现在几点了
 
+                        break;
+                    case 7:
+                        PackageManager packageManager = getPackageManager();
+                        Intent intent = new Intent();
+                        intent = packageManager.getLaunchIntentForPackage("com.iflytek.mscv5plusdemo");
+                        if (intent == null) {
+                            int code = mTts.startSpeaking("未安装", mTtsListener);
+                        } else
+                            startActivity(intent);
                         break;
                     default:
 
@@ -740,7 +764,7 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     Runnable runnableUi = new Runnable() {
         @Override
         public void run() {
-            tv_recv.append("\n"+recv_buff);
+            result.setText("\n"+recv_buff);
         }
     };
 
@@ -785,6 +809,29 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
         }
     }
 
+    private class SocketConnect implements Runnable {
+        @Override
+        public void run() {
+//            try {
+//                if (socket.getKeepAlive()) {
+//                    socket.setKeepAlive(false);
+//                    socket.close();
+//                }
+//            } catch (SocketException e) {
+//                e.printStackTrace();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//            try {
+//                piIP = GetPiIputil.getConnectedIP().get(0);
+//                socket = new Socket(piIP , 7654);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+        }
+    }
+
+
     private void monitorIPThread() {
         new Thread(new Runnable() {
             @Override
@@ -804,6 +851,7 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     }
 
     private void printTransResult (RecognizerResult results) {
+
         String trans  = JsonParser.parseTransResult(results.getResultString(),"dst");
         String oris = JsonParser.parseTransResult(results.getResultString(),"src");
 
@@ -816,6 +864,12 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         Log.d(TAG, "wakedemoonPause: ...............................");
@@ -824,20 +878,21 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onRestart() {
         super.onRestart();
+
         Log.d(TAG, "WakeDenoonRestart: restar.........................");
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "onDestroy WakeDemoActivity");
+        Log.d(TAG, "onDestroy WakeDemoActivity:onDestroy..................");
         if( null != mTts ){
             mTts.stopSpeaking();
             // 退出时释放连接
             mTts.destroy();
         }
         // 销毁合成对象
-        mIvw = VoiceWakeuper.getWakeuper();
+//        mIvw = VoiceWakeuper.getWakeuper();
         if (mIvw != null) {
             mIvw.destroy();
             mIat.cancel();
