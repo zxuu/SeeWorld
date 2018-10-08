@@ -330,7 +330,7 @@ public class SpeechApp extends Application{
 			public void run() {
 				piIP = GetPiIputil.getConnectedIP().get(0);
 				try {
-					socket = new Socket(piIP , 7654);
+					socket = new Socket(piIP , 7653);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}

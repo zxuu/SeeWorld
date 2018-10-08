@@ -49,6 +49,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.SocketException;
@@ -104,6 +105,9 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     @Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+        setSocket();
+        //((SpeechApp) getApplication()).socket = (Socket) savedInstanceState.get("socket");
+            Log.d(TAG, ".......................onCreate:................................");
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 //        getWindow().setStatusBarColor(this.getResources().getColor(R.color.title_color));
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -135,12 +139,12 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 //                    e.printStackTrace();
 //                }
                 if (((SpeechApp) getApplication()).socket!=null) {
-                    System.out.println("###################");
+                    Log.d(TAG, "############################");
                     while (true) {      //循环进行收发
                         recv();
                     }
                 } else
-                    System.out.println("socket is null");
+                    Log.d(TAG, "socket is null");
             }
         }).start();
 
@@ -247,7 +251,8 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 //                startActivity(new Intent(WakeDemoActivity.this,GetPiIP.class));
 //                break;
             case R.id.bt_send:
-                mySend(4);
+                startActivity(new Intent(this, com.iflytek.Test.Button.class));
+//                mySend(4);
 //                startActivity(new Intent(this, com.iflytek.Test.Button.class));
                 break;
 		default:
@@ -256,37 +261,6 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 	}
 
     private void recv() {
-
-//        //单开一个线程循环接收来自服务器端的消息
-//        InputStream inputStream = null;
-//        try {
-//            inputStream = socket.getInputStream();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//        if (inputStream!=null){
-//            try {
-//                byte[] buffer = new byte[1024];
-//                int count = inputStream.read(buffer);//count是传输的字节数
-//                recv_buff = new String(buffer);//socket通信传输的是byte类型，需要转为String类型
-//                JSONObject jsonObject = new JSONObject(recv_buff);
-//                System.out.println(jsonObject.get("1"));
-//                recv_buff = (String) jsonObject.get("1");
-//                //Toast.makeText(this, (String) jsonObject.get("1"), Toast.LENGTH_SHORT).show();
-//
-//
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//        //将受到的数据显示在TextView上
-////        if (recv_buff!=null){
-////            handler.post(runnableUi);
-////
-////        }
         final HandleRecInfo handleRecInfo = new HandleRecInfo(((SpeechApp)getApplication()).socket);
         handleRecInfo.handleInfo(new ReceiveBack() {
             @Override
@@ -302,7 +276,6 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
                     case 3: //回答(小飞小飞，我的正前方有哪些东西)
                         String thingsStr = handleRecInfo.getThings();
                         recv_buff = msg + thingsStr;
-                        result.setText(thingsStr);
                         int code3 = mTts.startSpeaking(thingsStr, mTtsListener);
                         break;
                     case 4: //回答(小飞小飞，我指示的东西是什么)
@@ -501,8 +474,8 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
                         destination = handleSend.getDestination();
                         daoHang();
                         break;
-                    case 3: //小飞小飞。我的正前方有哪些东西
-
+                    case 3: //小飞小飞，我的正前方有哪些东西
+                        mySend(3);
                         break;
                     case 4: //小飞小飞，我指示的东西是什么
                         mySend(4);
@@ -511,14 +484,14 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
                         mySend(5);
                         break;
                     case 6: //小飞小飞，现在几点了
-
+                        int code = mTts.startSpeaking(GetTime.getTime(), mTtsListener);
                         break;
                     case 7:
                         PackageManager packageManager = getPackageManager();
                         Intent intent = new Intent();
                         intent = packageManager.getLaunchIntentForPackage("com.iflytek.mscv5plusdemo");
                         if (intent == null) {
-                            int code = mTts.startSpeaking("未安装", mTtsListener);
+                            int code7 = mTts.startSpeaking("未安装", mTtsListener);
                         } else
                             startActivity(intent);
                         break;
@@ -564,13 +537,18 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
         LatLng pt1 = new LatLng(lat,lng);//38.016107,112.449064
         LatLng pt2 = new LatLng(pt2lat,pt2lng);
         // 构建 导航参数
-        NaviParaOption para = new NaviParaOption()
+        final NaviParaOption para = new NaviParaOption()
                 .startPoint(pt1).endPoint(pt2);
-        try {
-            BaiduMapNavigation.openBaiduMapWalkNavi(para, getContext());
-        } catch (BaiduMapAppNotSupportNaviException e) {
-            e.printStackTrace();
-        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    BaiduMapNavigation.openBaiduMapWalkNavi(para, getContext());
+                } catch (BaiduMapAppNotSupportNaviException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     //位置实例
@@ -850,42 +828,93 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
         }).start();
     }
 
-    private void printTransResult (RecognizerResult results) {
-
-        String trans  = JsonParser.parseTransResult(results.getResultString(),"dst");
-        String oris = JsonParser.parseTransResult(results.getResultString(),"src");
-
-        if( TextUtils.isEmpty(trans)|| TextUtils.isEmpty(oris) ){
-            showTip( "解析结果失败，请确认是否已开通翻译功能。" );
-        }else{
-            Log.d(TAG, "printTransResult: "+"原始语言:\n"+oris+"\n目标语言:\n"+trans);
+//    @Override
+//    protected void onSaveInstanceState(Bundle outState) {
+//        super.onSaveInstanceState(outState);
+//        Log.d(TAG, "............................onSaveInstanceState:......................");
+//        outState.putSerializable("socket", (Serializable) ((SpeechApp) getApplication()).socket);
+//    }
+    private void setSocket() {
+        if (!((SpeechApp) getApplication()).socket.isConnected()) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        ((SpeechApp) getApplication()).socket = new Socket(GetPiIputil.getConnectedIP().get(0) , 7653);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
         }
-
+//        try {
+//            if (!((SpeechApp) getApplication()).socket.getKeepAlive()) {
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        try {
+//                            ((SpeechApp) getApplication()).socket = new Socket(GetPiIputil.getConnectedIP().get(0) , 7654);
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }).start();
+//            }
+//        } catch (SocketException e) {
+//            e.printStackTrace();
+//        }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-
+        Log.d(TAG, "....................WakeDeno...................onStart:..........................");
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d(TAG, "wakedemoonPause: ...............................");
+        Log.d(TAG, "...................wakedemoonPause: ...............................");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "wakedemo....................onResume:.............................");
     }
 
     @Override
     protected void onRestart() {
         super.onRestart();
+        if (!((SpeechApp) getApplication()).socket.isConnected()) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        ((SpeechApp) getApplication()).socket = new Socket(GetPiIputil.getConnectedIP().get(0) , 7653);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
+        }
+        Log.d(TAG, "......................WakeDenoonRestart: restar.........................");
+    }
 
-        Log.d(TAG, "WakeDenoonRestart: restar.........................");
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d(TAG, "........onStop: ...................WakeDeno......................");
+        if (((SpeechApp) getApplication()).socket.isConnected()) {
+            Toast.makeText(this, "socket is Connect", Toast.LENGTH_SHORT).show();
+        } else
+            Toast.makeText(this, "socket is not Connect", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "onDestroy WakeDemoActivity:onDestroy..................");
+        Log.d(TAG, "..................onDestroy WakeDemoActivity:onDestroy..................");
         if( null != mTts ){
             mTts.stopSpeaking();
             // 退出时释放连接

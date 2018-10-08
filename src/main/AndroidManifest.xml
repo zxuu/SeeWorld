@@ -33,7 +33,7 @@
 
     <application
         android:name=".SpeechApp"
-        android:icon="@drawable/icon"
+        android:icon="@drawable/app"
         android:label="SeeWorld">
         <activity android:name="com.iflytek.speech.setting.TtsSettings" />
         <activity android:name="com.iflytek.speech.setting.IatSettings" />
