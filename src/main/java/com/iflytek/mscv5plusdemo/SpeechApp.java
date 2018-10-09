@@ -58,6 +58,11 @@ public class SpeechApp extends Application{
 	private int curThresh = 1450;
 	private String keep_alive = "1";
 	private String ivwNetMode = "0";
+	//------------------------------
+	public double lat=0.0;
+	public double lng=0.0;
+	public double pt2lat=0.0;
+	public double pt2lng=0.0;
 
 	@Override
 	public void onCreate() {
@@ -325,16 +330,16 @@ public class SpeechApp extends Application{
 	};
 
 	public void getSocket() {
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				piIP = GetPiIputil.getConnectedIP().get(0);
-				try {
-					socket = new Socket(piIP , 7653);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}).start();
+//		new Thread(new Runnable() {
+////			@Override
+////			public void run() {
+////				piIP = GetPiIputil.getConnectedIP().get(0);
+////				try {
+////					socket = new Socket(piIP , 7653);
+////				} catch (IOException e) {
+////					e.printStackTrace();
+////				}
+////			}
+////		}).start();
 	}
 }

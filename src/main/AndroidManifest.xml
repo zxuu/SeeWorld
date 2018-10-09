@@ -57,6 +57,9 @@
         <!-- AK鉴权 -->
         <!-- meta-data需要写在application中 -->
         <meta-data
+            android:name="com.amap.api.v2.apikey"
+            android:value="894519f324dcdb2708a41fb5b082dba6" />
+        <meta-data
             android:name="com.baidu.lbsapi.API_KEY"
             android:value="GY8rADx7a5mi8qVU1Kz755c2GU05Arnw" /> <!-- http://lbsyun.baidu.com/apiconsole/key -->
         <activity android:name=".TongxinDemoActivity" />
@@ -79,6 +82,8 @@
             android:launchMode="singleInstance"
             android:theme="@style/HooliganActivityStyle" />
         <activity android:name="com.iflytek.Test.Button"></activity>
+        <activity android:name=".WalkRouteCalculateActivity"></activity>
+        <activity android:name=".BaseActivity"></activity>
     </application>
 
 </manifest>

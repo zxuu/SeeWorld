@@ -105,7 +105,7 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     @Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-        setSocket();
+        //setSocket();
         //((SpeechApp) getApplication()).socket = (Socket) savedInstanceState.get("socket");
             Log.d(TAG, ".......................onCreate:................................");
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -128,25 +128,25 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
         }
         //--------------------------------
         //单开一个线程来进行socket通信
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-
-//                try {
-//                    piIP = GetPiIputil.getConnectedIP().get(0);
-//                    socket = new Socket(piIP , 7654);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-                if (((SpeechApp) getApplication()).socket!=null) {
-                    Log.d(TAG, "############################");
-                    while (true) {      //循环进行收发
-                        recv();
-                    }
-                } else
-                    Log.d(TAG, "socket is null");
-            }
-        }).start();
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//
+////                try {
+////                    piIP = GetPiIputil.getConnectedIP().get(0);
+////                    socket = new Socket(piIP , 7654);
+////                } catch (IOException e) {
+////                    e.printStackTrace();
+////                }
+//                if (((SpeechApp) getApplication()).socket!=null) {
+//                    Log.d(TAG, "############################");
+//                    while (true) {      //循环进行收发
+//                        recv();
+//                    }
+//                } else
+//                    Log.d(TAG, "socket is null");
+//            }
+//        }).start();
 
         //单开一个线程查看IP地址是否变化
         monitorIPThread();
@@ -229,7 +229,7 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 //                startActivity(new Intent(WakeDemoActivity.this,TtsDemoActivity.class));
 //                break;
             case R.id.btn_daohang:
-                destination = "中北大学";
+                destination = "太原理工大学";
                 daoHang();
                 break;
             case R.id.btn_weizhi:
@@ -251,7 +251,7 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
 //                startActivity(new Intent(WakeDemoActivity.this,GetPiIP.class));
 //                break;
             case R.id.bt_send:
-                startActivity(new Intent(this, com.iflytek.Test.Button.class));
+                startActivity(new Intent(this, WalkRouteCalculateActivity.class));
 //                mySend(4);
 //                startActivity(new Intent(this, com.iflytek.Test.Button.class));
                 break;
@@ -525,6 +525,8 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
         locationService.start();
         lat = MyBdLocation.getLatitude();
         lng = MyBdLocation.getLongitude();
+        ((SpeechApp) getApplication()).lat = lat;
+        ((SpeechApp) getApplication()).lng = lng;
 
         Thread daoHangThre = new Thread(new daoHangUrlThre());
         daoHangThre.start();
@@ -534,21 +536,23 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
             e.printStackTrace();
         }
 
-        LatLng pt1 = new LatLng(lat,lng);//38.016107,112.449064
-        LatLng pt2 = new LatLng(pt2lat,pt2lng);
-        // 构建 导航参数
-        final NaviParaOption para = new NaviParaOption()
-                .startPoint(pt1).endPoint(pt2);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    BaiduMapNavigation.openBaiduMapWalkNavi(para, getContext());
-                } catch (BaiduMapAppNotSupportNaviException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
+//        LatLng pt1 = new LatLng(lat,lng);//38.016107,112.449064
+//        LatLng pt2 = new LatLng(pt2lat,pt2lng);
+//        // 构建 导航参数
+//        final NaviParaOption para = new NaviParaOption()
+//                .startPoint(pt1).endPoint(pt2);
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    BaiduMapNavigation.openBaiduMapWalkNavi(para, getContext());
+//                } catch (BaiduMapAppNotSupportNaviException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        }).start();
+
+        startActivity(new Intent(this,WalkRouteCalculateActivity.class));
     }
 
     //位置实例
@@ -775,8 +779,8 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
                     recv_buff2 = new String(buffer);//socket通信传输的是byte类型，需要转为String类型
                     JSONObject jsonObject = new JSONObject(recv_buff2);
 
-                    pt2lng= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lng");
-                    pt2lat= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lat");
+                    ((SpeechApp) getApplication()).pt2lng= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lng");
+                    ((SpeechApp) getApplication()).pt2lat= jsonObject.getJSONObject("result").getJSONObject("location").getDouble("lat");
 //                        handler.post(runnableUi1);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -886,18 +890,18 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onRestart() {
         super.onRestart();
-        if (!((SpeechApp) getApplication()).socket.isConnected()) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        ((SpeechApp) getApplication()).socket = new Socket(GetPiIputil.getConnectedIP().get(0) , 7653);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
-        }
+//        if (!((SpeechApp) getApplication()).socket.isConnected()) {
+//            new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    try {
+//                        ((SpeechApp) getApplication()).socket = new Socket(GetPiIputil.getConnectedIP().get(0) , 7653);
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }).start();
+//        }
         Log.d(TAG, "......................WakeDenoonRestart: restar.........................");
     }
 
@@ -905,10 +909,10 @@ public class WakeDemoActivity extends Activity implements View.OnClickListener {
     protected void onStop() {
         super.onStop();
         Log.d(TAG, "........onStop: ...................WakeDeno......................");
-        if (((SpeechApp) getApplication()).socket.isConnected()) {
-            Toast.makeText(this, "socket is Connect", Toast.LENGTH_SHORT).show();
-        } else
-            Toast.makeText(this, "socket is not Connect", Toast.LENGTH_SHORT).show();
+//        if (((SpeechApp) getApplication()).socket.isConnected()) {
+//            Toast.makeText(this, "socket is Connect", Toast.LENGTH_SHORT).show();
+//        } else
+//            Toast.makeText(this, "socket is not Connect", Toast.LENGTH_SHORT).show();
     }
 
     @Override
